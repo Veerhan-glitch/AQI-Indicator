@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Floating Search Box with World Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        /* Centering the map */
+        #map {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1; /* Ensure it's behind other content */
+        }
+
+        /* Style for search container */
+        .search-container {
+            position: fixed;
+            top: 35%;  left: 50%;
+            transition: top 0.5s ease;  /* Add transition for smooth movement */
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+        }
+
+        /* Styles for the search box when clicked */
+        .search-box:focus + .search-container {
+            top: 80%;  /* Move container to bottom on focus */
+        }
+
+        /* Styles for the search box */
+        .search-box {
+            padding: 10px;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            outline: none;
+        }
+
+        .search-button {
+            padding: 10px 20px;
+            border: none;
+            background-color: #007bff;
+            color: #fff;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <div class="search-container">
+        <input type="text" class="search-box" placeholder="Search location...">
+        <button class="search-button">Search</button>
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        // Initialize the map
+        var map = L.map('map').setView([0, 0], 2); // Center at (0,0) with zoom level 2
+
+        // Add OpenStreetMap tiles as the base layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Function to handle search and move map
+        function searchLocation() {
+            var searchTerm = document.querySelector('.search-box').value;
+            // Replace with your logic to find coordinates based on search term
+            // This is just a placeholder example, replace with actual geocoding logic
+            
+            var targetCoords = [28.544976, 77.192628];
+            map.flyTo(targetCoords, 13);  // Fly to location with zoom level 13
+        // Add event listener to search button}
+        }
+        document.querySelector('.search-button').addEventListener('click', searchLocation);
+    </script>
+['Current time 1712826900', 'Current temperature_2m 37.5', 'Current relative_humidity_2m 17.0', 'Current apparent_temperature 37.322994232177734', 'Current is_day 1.0', 'Current precipitation 0.0', 'Current rain 0.0', 'Current showers 0.0', 'Current snowfall 0.0', 'Current weather_code 1.0', 'Current cloud_cover 9.0', 'Current pressure_msl 1008.9000244140625', 'Current surface_pressure 983.5458984375', 'Current wind_speed_10m 6.569382667541504', 'Current wind_direction_10m 170.53775024414062']</body>
+</html>
