@@ -102,4 +102,6 @@ gunicorn
 
 ![screenshot](demo.png)
 
+team members - NAMAN TOMAR , PRAVEER SINGH CHAUHAN , RISHAB KUMAR 
+
 ---
