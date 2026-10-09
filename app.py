@@ -37,6 +37,45 @@ nominatim_lookup = RateLimiter(
 def cached_reverse_lookup(lat, lon):
     return nominatim_lookup("reverse", (lat, lon), timeout=5)
 
+
+def get_openweather_weather(lat, lon):
+    api_key = os.getenv("OPENWEATHER_API_KEY")
+    if not api_key:
+        return {"error": "Weather data unavailable"}
+
+    response = None
+    try:
+        response = requests.get(
+            "https://api.openweathermap.org/data/2.5/weather",
+            params={
+                "lat": lat,
+                "lon": lon,
+                "appid": api_key,
+                "units": "metric"
+            },
+            timeout=10
+        )
+        response.raise_for_status()
+        data = response.json()
+        current = data["main"]
+        wind = data.get("wind", {})
+        rain = data.get("rain", {})
+        return {
+            "temperature_2m": current["temp"],
+            "humidity": current["humidity"],
+            "apparent_temperature": current["feels_like"],
+            "precipitation": rain.get("1h", rain.get("3h", 0.0)),
+            "cloud_cover": data.get("clouds", {}).get("all"),
+            "pressure_msl": current.get("pressure"),
+            "wind_speed_10m": wind["speed"] * 3.6 if "speed" in wind else None,
+            "wind_direction_10m": wind.get("deg")
+        }
+    except Exception as e:
+        status = response.status_code if response is not None else "no response"
+        print(f"OpenWeather weather fallback failed ({type(e).__name__}, {status})")
+        return {"error": "Weather data unavailable"}
+
+
 # Weather from Open-Meteo
 def get_weather(lat, lon):
     cache_session = requests_cache.CachedSession('.cache', expire_after=3600)
@@ -68,7 +107,7 @@ def get_weather(lat, lon):
         }
     except Exception as e:
         print("Weather fetch error:", e)
-        return {"error": "Weather data unavailable"}
+        return get_openweather_weather(lat, lon)
 
 # AQI from OpenWeatherMap
 def get_aqi(lat, lon):
