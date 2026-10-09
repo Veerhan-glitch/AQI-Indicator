@@ -1,8 +1,10 @@
 import os
+from functools import lru_cache
 
 from flask import Flask, render_template, request, jsonify
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderUnavailable, GeocoderTimedOut
+from geopy.extra.rate_limiter import RateLimiter
 import openmeteo_requests
 import requests_cache
 from retry_requests import retry
@@ -15,6 +17,25 @@ load_dotenv()
 
 app = Flask(__name__)
 env_geolocator = Nominatim(user_agent="pancha-thon")
+
+
+def _nominatim_lookup(operation, query, timeout):
+    if operation == "reverse":
+        return env_geolocator.reverse(query, timeout=timeout)
+    return env_geolocator.geocode(query, timeout=timeout)
+
+
+nominatim_lookup = RateLimiter(
+    _nominatim_lookup,
+    min_delay_seconds=1,
+    max_retries=0,
+    swallow_exceptions=False
+)
+
+
+@lru_cache(maxsize=512)
+def cached_reverse_lookup(lat, lon):
+    return nominatim_lookup("reverse", (lat, lon), timeout=5)
 
 # Weather from Open-Meteo
 def get_weather(lat, lon):
@@ -83,7 +104,7 @@ def search():
     if not term:
         return jsonify({"error": "No search term provided"}), 400
     try:
-        location = env_geolocator.geocode(term, timeout=5)
+        location = nominatim_lookup("geocode", term, timeout=5)
     except (GeocoderUnavailable, GeocoderTimedOut):
         return jsonify({"error": "Geocoding service unavailable or timed out."}), 503
     except Exception as e:
@@ -109,11 +130,10 @@ def reverse_lookup():
     if lat is None or lon is None:
         return jsonify({"error": "Latitude and longitude required"}), 400
     try:
-        location = env_geolocator.reverse((lat, lon), timeout=5)
+        location = cached_reverse_lookup(round(lat, 3), round(lon, 3))
     except Exception as e:
-        return jsonify({"error": f"Reverse geocoding failed: {str(e)}"}), 503
-    if not location:
-        return jsonify({"error": "No address found for coordinates"}), 404
+        print("Reverse geocoding unavailable:", e)
+        location = None
 
     weather = get_weather(lat, lon)
     aqi = get_aqi(lat, lon)
@@ -121,7 +141,7 @@ def reverse_lookup():
     return jsonify({
         "latitude": lat,
         "longitude": lon,
-        "location": location.address,
+        "location": location.address if location else f"{lat:.4f}, {lon:.4f}",
         "weather": weather,
         "aqi": aqi
     })
