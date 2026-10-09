@@ -79,21 +79,23 @@
 
       map.flyTo([data.latitude, data.longitude], 10);
 
-      const w = data.weather;
-      const a = data.aqi;
+      const w = data.weather || {};
+      const a = data.aqi || {};
+      const weatherValue = (value, suffix = '') =>
+        Number.isFinite(value) ? `${value}${suffix}` : 'Unavailable';
 
       document.getElementById("weather-info").innerHTML = `
         <b>${data.location}</b><br/><br/>
         <div class="info-content">
           <div class="info-section">
             <u>Weather:</u><br/>
-            Temp: ${w.temperature_2m}°C<br/>
-            Feels like: ${w.apparent_temperature.toFixed(1)}°C<br/>
-            Humidity: ${w.humidity}%<br/>
-            Cloud Cover: ${w.cloud_cover}%<br/>
-            Wind: ${w.wind_speed_10m} km/h (${w.wind_direction_10m}°)<br/>
-            Pressure: ${w.pressure_msl} hPa<br/>
-            Precipitation: ${w.precipitation} mm<br/>
+            Temp: ${weatherValue(w.temperature_2m, '°C')}<br/>
+            Feels like: ${weatherValue(w.apparent_temperature, '°C')}<br/>
+            Humidity: ${weatherValue(w.humidity, '%')}<br/>
+            Cloud Cover: ${weatherValue(w.cloud_cover, '%')}<br/>
+            Wind: ${weatherValue(w.wind_speed_10m, ' km/h')} (${weatherValue(w.wind_direction_10m, '°')})<br/>
+            Pressure: ${weatherValue(w.pressure_msl, ' hPa')}<br/>
+            Precipitation: ${weatherValue(w.precipitation, ' mm')}<br/>
           </div>
           <div class="info-section">
             <u>Air Quality:</u><br/>
@@ -111,21 +113,29 @@
       `;
     }
 
+    async function fetchLocation(url) {
+      const response = await fetch(url);
+      const data = await response.json();
+      if (!response.ok || data.error) {
+        throw new Error(data.error || `Request failed (${response.status})`);
+      }
+      return data;
+    }
+
     function searchLocation() {
-      const searchTerm = document.querySelector('.search-box').value;
+      const searchTerm = document.querySelector('.search-box').value.trim();
+      if (!searchTerm) {
+        document.getElementById('status-message').textContent = "❌ Enter a location to search";
+        return;
+      }
       document.getElementById('status-message').textContent = "⏳ Loading...";
-      fetch(`/search?term=${encodeURIComponent(searchTerm)}`)
-        .then(res => res.json())
+      fetchLocation(`/search?term=${encodeURIComponent(searchTerm)}`)
         .then(data => {
-          if (data.error) {
-            document.getElementById("status-message").textContent = `❌ ${data.error}`;
-          } else {
-            document.getElementById("status-message").textContent = "";
-            showData(data);
-          }
+          document.getElementById("status-message").textContent = "";
+          showData(data);
         })
-        .catch(() => {
-          document.getElementById("status-message").textContent = "❌ Request failed";
+        .catch(error => {
+          document.getElementById("status-message").textContent = `❌ ${error.message || 'Network request failed'}`;
         });
     }
 
@@ -137,18 +147,13 @@
     map.on('click', e => {
       const { lat, lng } = e.latlng;
       document.getElementById('status-message').textContent = "📍 Fetching location info...";
-      fetch(`/reverse?lat=${lat}&lon=${lng}`)
-        .then(res => res.json())
+      fetchLocation(`/reverse?lat=${lat}&lon=${lng}`)
         .then(data => {
-          if (data.error) {
-            document.getElementById("status-message").textContent = `❌ ${data.error}`;
-          } else {
-            document.getElementById("status-message").textContent = "";
-            showData(data);
-          }
+          document.getElementById("status-message").textContent = "";
+          showData(data);
         })
-        .catch(() => {
-          document.getElementById("status-message").textContent = "❌ Request failed";
+        .catch(error => {
+          document.getElementById("status-message").textContent = `❌ ${error.message || 'Network request failed'}`;
         });
     });
   </script>
